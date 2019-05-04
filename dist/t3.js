@@ -525,7 +525,6 @@ Box.Context = (function() {
  * @namespace
  */
 Box.Application = (function() {
-
 	'use strict';
 
 	//--------------------------------------------------------------------------
@@ -560,16 +559,15 @@ Box.Application = (function() {
 
 	var MODULE_SELECTOR = '[data-module]';
 
-	var globalConfig = {},   // Global configuration
-		modules = {},        // Information about each registered module by moduleName
-		serviceStack = [],   // Track circular dependencies while loading services
-		services = {},       // Information about each registered service by serviceName
-		behaviors = {},      // Information about each registered behavior by behaviorName
-		instances = {},      // Module instances keyed by DOM element id
+	var globalConfig = {}, // Global configuration
+		modules = {}, // Information about each registered module by moduleName
+		serviceStack = [], // Track circular dependencies while loading services
+		services = {}, // Information about each registered service by serviceName
+		behaviors = {}, // Information about each registered behavior by behaviorName
+		instances = {}, // Module instances keyed by DOM element id
 		initialized = false, // Flag whether the application has been initialized
 		customErrorHandler = null,
-
-		application = new Box.EventTarget();	// base object for application
+		application = new Box.EventTarget(); // base object for application
 
 	/**
 	 * Simple implementation of ES6 Object.assign() with just two parameters.
@@ -579,7 +577,6 @@ Box.Application = (function() {
 	 * @private
 	 */
 	function assign(receiver, supplier) {
-
 		for (var prop in supplier) {
 			if (supplier.hasOwnProperty(prop)) {
 				receiver[prop] = supplier[prop];
@@ -620,7 +617,6 @@ Box.Application = (function() {
 		instances = {};
 		initialized = false;
 	}
-
 
 	/**
 	 * Indicates if a given service is being instantiated. This is used to check
@@ -676,9 +672,7 @@ Box.Application = (function() {
 	 * @private
 	 */
 	function captureObjectErrors(object, objectName) {
-
-		var propertyName,
-			propertyValue;
+		var propertyName, propertyValue;
 
 		/* eslint-disable guard-for-in, no-loop-func */
 		for (propertyName in object) {
@@ -695,7 +689,8 @@ Box.Application = (function() {
 				 */
 				object[propertyName] = (function(methodName, method) {
 					return function() {
-						var errorPrefix = objectName + '.' + methodName + '() - ';
+						var errorPrefix =
+							objectName + '.' + methodName + '() - ';
 						try {
 							return method.apply(this, arguments);
 						} catch (ex) {
@@ -706,8 +701,7 @@ Box.Application = (function() {
 							error(ex);
 						}
 					};
-
-				}(propertyName, propertyValue));
+				})(propertyName, propertyValue);
 			}
 		}
 		/* eslint-enable guard-for-in, no-loop-func */
@@ -739,7 +733,10 @@ Box.Application = (function() {
 	function callModuleMethod(instance, method) {
 		if (typeof instance[method] === 'function') {
 			// Getting the rest of the parameters (the ones other than instance and method)
-			instance[method].apply(instance, Array.prototype.slice.call(arguments, 2));
+			instance[method].apply(
+				instance,
+				Array.prototype.slice.call(arguments, 2)
+			);
 		}
 	}
 
@@ -751,15 +748,20 @@ Box.Application = (function() {
 	 * @private
 	 */
 	function getService(serviceName) {
-
 		var serviceData = services[serviceName];
 
 		if (serviceData) {
-
 			if (!serviceData.instance) {
 				// check for circular dependencies
 				if (isServiceBeingInstantiated(serviceName)) {
-					error(new ReferenceError('Circular service dependency: ' + serviceStack.join(' -> ') + ' -> ' + serviceName));
+					error(
+						new ReferenceError(
+							'Circular service dependency: ' +
+								serviceStack.join(' -> ') +
+								' -> ' +
+								serviceName
+						)
+					);
 					return null;
 				}
 
@@ -810,11 +812,18 @@ Box.Application = (function() {
 
 			// First make sure we haven't already included this behavior for this module
 			if (behaviorName in includedBehaviors) {
-				error(new Error('Behavior "' + behaviorName + '" cannot be specified twice in a module.'));
+				error(
+					new Error(
+						'Behavior "' +
+							behaviorName +
+							'" cannot be specified twice in a module.'
+					)
+				);
 			} else if (behaviorData) {
-
 				if (!moduleBehaviorInstances[behaviorName]) {
-					moduleBehaviorInstances[behaviorName] = behaviorData.creator(instanceData.context);
+					moduleBehaviorInstances[
+						behaviorName
+					] = behaviorData.creator(instanceData.context);
 				}
 
 				behaviorInstances.push(moduleBehaviorInstances[behaviorName]);
@@ -839,7 +848,11 @@ Box.Application = (function() {
 	 * @private
 	 */
 	function createAndBindEventDelegate(eventDelegates, element, handler) {
-		var delegate = new Box.DOMEventDelegate(element, handler, globalConfig.eventTypes);
+		var delegate = new Box.DOMEventDelegate(
+			element,
+			handler,
+			globalConfig.eventTypes
+		);
 		eventDelegates.push(delegate);
 		delegate.attachEvents();
 	}
@@ -855,11 +868,19 @@ Box.Application = (function() {
 			moduleBehaviors = getBehaviors(instanceData);
 
 		// bind the module events
-		createAndBindEventDelegate(eventDelegates, instanceData.element, instanceData.instance);
+		createAndBindEventDelegate(
+			eventDelegates,
+			instanceData.element,
+			instanceData.instance
+		);
 
 		// bind the behavior(s) events
 		for (var i = 0; i < moduleBehaviors.length; i++) {
-			createAndBindEventDelegate(eventDelegates, instanceData.element, moduleBehaviors[i]);
+			createAndBindEventDelegate(
+				eventDelegates,
+				instanceData.element,
+				moduleBehaviors[i]
+			);
 		}
 	}
 
@@ -870,7 +891,6 @@ Box.Application = (function() {
 	 * @private
 	 */
 	function unbindEventListeners(instanceData) {
-
 		var eventDelegates = instanceData.eventDelegates;
 
 		for (var i = 0; i < eventDelegates.length; i++) {
@@ -899,12 +919,15 @@ Box.Application = (function() {
 	 * @private
 	 */
 	function callMessageHandler(instance, name, data) {
-
 		// If onmessage is an object call message handler with the matching key (if any)
-		if (instance.onmessage !== null && typeof instance.onmessage === 'object' && instance.onmessage.hasOwnProperty(name)) {
+		if (
+			instance.onmessage !== null &&
+			typeof instance.onmessage === 'object' &&
+			instance.onmessage.hasOwnProperty(name)
+		) {
 			instance.onmessage[name].call(instance, data);
 
-		// Otherwise if message name exists in messages call onmessage with name, data
+			// Otherwise if message name exists in messages call onmessage with name, data
 		} else if (indexOf(instance.messages || [], name) !== -1) {
 			instance.onmessage.call(instance, name, data);
 		}
@@ -916,7 +939,6 @@ Box.Application = (function() {
 
 	/** @lends Box.Application */
 	return assign(application, {
-
 		//----------------------------------------------------------------------
 		// Application Lifecycle
 		//----------------------------------------------------------------------
@@ -978,7 +1000,11 @@ Box.Application = (function() {
 				module;
 
 			if (!moduleData) {
-				error(new Error('Module type "' + moduleName + '" is not defined.'));
+				error(
+					new Error(
+						'Module type "' + moduleName + '" is not defined.'
+					)
+				);
 				return this;
 			}
 
@@ -1022,7 +1048,6 @@ Box.Application = (function() {
 
 				// Bind events after initialization is complete to avoid event timing issues
 				bindEventListeners(instanceData);
-
 			}
 
 			return this;
@@ -1038,14 +1063,16 @@ Box.Application = (function() {
 			var instanceData = getInstanceDataByElement(element);
 
 			if (!instanceData) {
-
 				if (globalConfig.debug) {
-					error(new Error('Unable to stop module associated with element: ' + element.id));
+					error(
+						new Error(
+							'Unable to stop module associated with element: ' +
+								element.id
+						)
+					);
 					return this;
 				}
-
 			} else {
-
 				unbindEventListeners(instanceData);
 
 				// Call these in reverse order
@@ -1099,6 +1126,15 @@ Box.Application = (function() {
 		//----------------------------------------------------------------------
 
 		/**
+		 * Checks if a module already registered
+		 * @param {string} moduleName The name of the module to check.
+		 * @returns {boolean} True, if module already registered. False, otherwise.
+		 */
+		hasModule: function(moduleName) {
+			return modules.hasOwnProperty(moduleName);
+		},
+
+		/**
 		 * Registers a new module
 		 * @param {string} moduleName Unique module identifier
 		 * @param {Function} creator Factory function used to generate the module
@@ -1107,7 +1143,11 @@ Box.Application = (function() {
 		 */
 		addModule: function(moduleName, creator) {
 			if (typeof modules[moduleName] !== 'undefined') {
-				error(new Error('Module ' + moduleName + ' has already been added.'));
+				error(
+					new Error(
+						'Module ' + moduleName + ' has already been added.'
+					)
+				);
 				return this;
 			}
 
@@ -1128,7 +1168,6 @@ Box.Application = (function() {
 		 *                if no name is specified (null if either not found)
 		 */
 		getModuleConfig: function(element, name) {
-
 			var instanceData = getInstanceDataByElement(element);
 			var moduleConfig = null;
 
@@ -1137,14 +1176,23 @@ Box.Application = (function() {
 				moduleConfig = instanceData.config;
 			} else {
 				// Read the special script element that stores module configuration in the markup
-				var configElement = Box.DOM.query(element, 'script[type="text/x-config"]');
+				var configElement = Box.DOM.query(
+					element,
+					'script[type="text/x-config"]'
+				);
 
 				// <script> tag supports .text property
 				if (configElement) {
 					try {
 						moduleConfig = JSON.parse(configElement.text);
 					} catch (exception) {
-						error(new Error('Module with id ' + element.id + ' has a malformed config.'));
+						error(
+							new Error(
+								'Module with id ' +
+									element.id +
+									' has a malformed config.'
+							)
+						);
 					}
 				}
 
@@ -1163,7 +1211,6 @@ Box.Application = (function() {
 			} else {
 				return null;
 			}
-
 		},
 
 		//----------------------------------------------------------------------
@@ -1178,9 +1225,12 @@ Box.Application = (function() {
 		 * @throws {Error} If a service has already been added
 		 */
 		addService: function(serviceName, creator) {
-
 			if (typeof services[serviceName] !== 'undefined') {
-				error(new Error('Service ' + serviceName + ' has already been added.'));
+				error(
+					new Error(
+						'Service ' + serviceName + ' has already been added.'
+					)
+				);
 				return this;
 			}
 
@@ -1213,6 +1263,15 @@ Box.Application = (function() {
 		//----------------------------------------------------------------------
 
 		/**
+		 * Checks if a module already registered
+		 * @param {string} behaviorName The name of the behavior to check.
+		 * @returns {boolean} True, if behavior already registered. False, otherwise.
+		 */
+		hasBehavior: function(behaviorName) {
+			return modules.hasOwnProperty(behaviorName);
+		},
+
+		/**
 		 * Registers a new behavior
 		 * @param {string} behaviorName Unique behavior identifier
 		 * @param {Function} creator Factory function used to generate the behavior
@@ -1221,7 +1280,11 @@ Box.Application = (function() {
 		 */
 		addBehavior: function(behaviorName, creator) {
 			if (typeof behaviors[behaviorName] !== 'undefined') {
-				error(new Error('Behavior ' + behaviorName + ' has already been added.'));
+				error(
+					new Error(
+						'Behavior ' + behaviorName + ' has already been added.'
+					)
+				);
 				return this;
 			}
 
@@ -1244,14 +1307,9 @@ Box.Application = (function() {
 		 * @returns {Box.Application} The application object.
 		 */
 		broadcast: function(name, data) {
-			var i,
-				id,
-				instanceData,
-				behaviorInstance,
-				moduleBehaviors;
+			var i, id, instanceData, behaviorInstance, moduleBehaviors;
 
 			for (id in instances) {
-
 				if (instances.hasOwnProperty(id)) {
 					instanceData = instances[id];
 
@@ -1265,7 +1323,6 @@ Box.Application = (function() {
 						callMessageHandler(behaviorInstance, name, data);
 					}
 				}
-
 			}
 
 			// also fire an event so non-T3 code can listen for the message
@@ -1317,7 +1374,11 @@ Box.Application = (function() {
 		 */
 		setGlobalConfig: function(config) {
 			if (initialized) {
-				error(new Error('Cannot set global configuration after application initialization'));
+				error(
+					new Error(
+						'Cannot set global configuration after application initialization'
+					)
+				);
 				return this;
 			}
 
@@ -1381,10 +1442,8 @@ Box.Application = (function() {
 				}
 			}
 		}
-
 	});
-
-}());
+})();
 
 	if (typeof define === 'function' && define.amd) {
 		// AMD
